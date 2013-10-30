@@ -49,14 +49,16 @@ class SQueueTestCase(unittest.TestCase):
           value = "100"
           self.conn.set_queue_attribute(queue,attribute,value)
           getValue = self.conn.get_queue_attributes(queue,attribute)
+          self.assertTrue(getValue.has_key(attribute))
           print "I get",getValue
-          self.assertEqual(value,getValue,"attribute mismatch")
+          self.assertEqual(value,getValue[attribute],"attribute mismatch")
        except ValueError:
            print str(ValueError)
            status = False
        finally:
            self.conn.delete_queue(queue)
        self.assertTrue(status)
+
 
    def testMessage(self):
        status = True
@@ -65,7 +67,7 @@ class SQueueTestCase(unittest.TestCase):
        try:
           m1 = Message()
           m1.set_body("Hello Ketty")
-          status = queue.write(m1)
+          queue.write(m1)
 
 
           getM1 = queue.get_messages(1,10)
@@ -86,8 +88,43 @@ class SQueueTestCase(unittest.TestCase):
 
           for loop in range(0,testloop):
               mess = queue.get_messages(testNum)
+              queue.delete_message_batch(mess)
               print mess
 
+
+       except ValueError:
+           print str(ValueError)
+           status = False
+       finally:
+           self.conn.delete_queue(queue)
+           self.assertTrue(status)
+
+   def testBatch(self):
+       status = True
+       qName = self.generateQueueName("testBatch")
+       queue = self.conn.create_queue(qName)
+       #queue = self.conn.get_queue(qName)
+       try:
+           testNum = 10
+           testloop = 10
+           for loop in range(0,testloop):
+                messages = []
+                for id in range(0,testNum):
+                    body = "%d_%d"%(loop,id)
+                    messageId = body
+                    delaySecond = 0
+                    messages.append([messageId,body,delaySecond])
+                queue.write_batch(messages)
+
+
+
+           # #time.sleep(1)
+           for loop in range(0,testloop):
+               mess = queue.get_messages(testNum)
+               print len(mess)
+               for one_mess in mess:
+                   print one_mess.get_body()
+               queue.delete_message_batch(mess)
 
        except ValueError:
            print str(ValueError)
